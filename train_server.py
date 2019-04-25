@@ -16,8 +16,7 @@ def receive_data():
     dirPATH = model_settings.train_data_path
     with open(dirPATH + time.strftime("%Y%m%d-%H%M%S") + data[0]['HUB'] + '.json', 'a') as fout:
         json.dump(data, fout)
-
-    return "Tu culo"
+    return jsonify({'result':'Success!'})
 if __name__ == '__main__':
 	app.run(host="0.0.0.0", port=5000)
 	#app.run(port=5000, debug=True)
