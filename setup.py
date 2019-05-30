@@ -1,3 +1,5 @@
+#Run this script after cloning the repository
+
 import os
 from flaskr import model_settings
 
