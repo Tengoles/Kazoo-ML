@@ -1,6 +1,10 @@
-import model_settings
+import sys
+from flaskr import model_settings
 from datetime import datetime, timedelta
 import os
+import traceback
+import zlib
+import urllib.request
 from sqlalchemy import create_engine
 import pandas as pd
 import numpy as np
@@ -15,6 +19,8 @@ import time
 import pickle
 from xgboost import XGBClassifier
 
+ENDPOINT_URL = 'https://api.kazooanalytics.com/api/v2/hub/logs'
+
 def append_entries_json(dirPATH):
     files = os.listdir(dirPATH)
     files.sort()
@@ -28,6 +34,38 @@ def append_entries_json(dirPATH):
     DF['fechahora'] = pd.to_datetime(DF['fechahora'], format="%Y-%m-%d %H:%M:%S.%f")
     return DF
 
+# esta funcion agarra el dataset, le modifica el formato de la
+# informacion y lo envia como la informacion de varios falsos HUB
+def process_and_send(dataset):
+    for zona in list(dataset.Zona.unique()):
+        reduced_file_data = []
+        print("Procesando " + zona)
+        data_zona = dataset[dataset['Zona'] == zona]
+        for row in data_zona.itertuples():
+            entry = {'datetime': str(row.fechahora),
+                     'mac_phone': row.MAC,
+                     'rssi': str(-69)} #todo: encontrar un valor mas representativo para este campo
+            reduced_file_data.append(entry)
+
+        data_to_send = {
+            'hub_identificator': zona,
+            'data': reduced_file_data
+        }
+
+        print("Enviando " + zona)
+        data_to_send = json.dumps(data_to_send)
+        print("Comprimiendo")
+        compressed_data_to_send = zlib.compress(data_to_send.encode('utf-8'))
+        print ('>>> ' + str(sys.getsizeof(data_to_send)))
+        print ('>>> ' + str(sys.getsizeof(compressed_data_to_send)))
+        req = urllib.request.Request(ENDPOINT_URL, compressed_data_to_send)
+        req.add_header('Content-Length', '%d' % len(compressed_data_to_send))
+        req.add_header('Content-Encoding', 'application/octet-stream')
+        response = urllib.request.urlopen(req)
+        content  =  response.read()
+        print("Enviado, respuesta: " + str(response.getcode()))
+
+
 
 if __name__ == "__main__":
     try:
@@ -39,7 +77,7 @@ if __name__ == "__main__":
                 json_files.append(file)
         DF = append_entries_json(dirPATH)    #aca voy a tener en un DF todos los datos obtenidos de los HUBs
                                          #desde la ultima vez que se corrio este script
-        DF = DF.loc[(DF['fechahora'] > "20190411-115300") & (DF['fechahora'] < "20190411-130700")]
+        #DF = DF.loc[(DF['fechahora'] > "20190411-115300") & (DF['fechahora'] < "20190411-130700")]
         columns = list(DF.HUB.unique())
         columns.append('MAC')
         columns.append('fechahora')
@@ -60,14 +98,15 @@ if __name__ == "__main__":
                     dataset.loc[dataset_i, 'fechahora'] = DF_mac.iloc[i].fechahora
                     dataset_i += 1
 
-        array = dataset.dropna(thresh=5).values
+        array = dataset.dropna(thresh=6).values
         X = array[:, 0:(len(dataset.columns) - 3)]
         model = pickle.load(open(model_settings.train_data_path + "finalized_model.sav", 'rb'))
         Y = model.predict(X)
-        dataset2 = dataset.dropna(thresh=5)
+        dataset2 = dataset.dropna(thresh=6)
         dataset2 = dataset2.reset_index(drop = True)
         dataset2['Zona'] = pd.DataFrame(Y)
         dataset2 = dataset2.sort_values(by='fechahora')
+        process_and_send(dataset2)
         print("Trato de insertar a DB")
         engine = create_engine(model_settings.engine_string)
         dataset2.to_sql('Sinergia_ML', engine, if_exists='append', index=False)
@@ -76,10 +115,15 @@ if __name__ == "__main__":
             command = "mv %s%s %sprocessed_files" %(model_settings.predict_data_path, file, model_settings.predict_data_path)
             print(command)
             os.system(command)
-        #todo: meter en una carpeta aparte los archivos que ya pasaron por el algoritmo y fueron metidos en la DB
+        fecha = time.strftime("%Y%m%d-%H%M%S")
+        msg = "Datos procesados y movidos " + fecha + '\n'
+        print(msg)
+        with open(model_settings.LOG_FILE, "a") as logFile:
+            logFile.write(msg)
+
     except Exception as e:
         fecha = time.strftime("%Y%m%d-%H%M%S")
-        error = "Exception predict_and_send: " + str(e) + " " + fecha + '\n'
-        print(error)
+        error = "Exception predict_and_send: " + str(traceback.format_exc()) + " " + fecha + '\n'
+        print(traeback.format_exc())
         with open(model_settings.LOG_FILE, "a") as logFile:
             logFile.write(error)
