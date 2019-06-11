@@ -124,6 +124,6 @@ if __name__ == "__main__":
     except Exception as e:
         fecha = time.strftime("%Y%m%d-%H%M%S")
         error = "Exception predict_and_send: " + str(traceback.format_exc()) + " " + fecha + '\n'
-        print(traeback.format_exc())
+        print(traceback.format_exc())
         with open(model_settings.LOG_FILE, "a") as logFile:
             logFile.write(error)
