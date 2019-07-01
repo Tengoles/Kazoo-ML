@@ -65,8 +65,9 @@ def process_and_send(dataset):
         content  =  response.read()
         print("Enviado, respuesta: " + str(response.getcode()))
 
-
-
+class TransitionError(Exception):
+    def __init__(self, message):
+        self.message = message
 if __name__ == "__main__":
     try:
         dirPATH = model_settings.predict_data_path
@@ -75,6 +76,12 @@ if __name__ == "__main__":
         for file in files:
             if ".json" in file:
                 json_files.append(file)
+        for HUB in model_settings.HUBS:
+            if any(HUB in file for file in json_files):
+                pass
+            else:
+                print("Faltan datos de %s"%HUB)
+                raise TransitionError("Faltan datos de %s"%HUB)
         DF = append_entries_json(dirPATH)    #aca voy a tener en un DF todos los datos obtenidos de los HUBs
                                          #desde la ultima vez que se corrio este script
         #DF = DF.loc[(DF['fechahora'] > "20190411-115300") & (DF['fechahora'] < "20190411-130700")]
@@ -127,3 +134,5 @@ if __name__ == "__main__":
         print(traceback.format_exc())
         with open(model_settings.LOG_FILE, "a") as logFile:
             logFile.write(error)
+        from server_tools import mandar_mail_notificacion
+        mandar_mail_notificacion(e.message,"enzo.tng@gmail.com")
