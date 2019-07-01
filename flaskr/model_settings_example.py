@@ -12,3 +12,5 @@ predict_data_path = "/home/ubuntu/Kazoo-ML/flaskr/predict_data/"
 LOG_FILE=  "/home/ubuntu/Kazoo-ML/flaskr/logs/messages.log"
 
 engine_string = 'postgresql://user:passwd@localhost:5432/db_name'
+
+HUBS = ["HUB_OFICINA11","HUB_OFICINA15", "HUB_OFICINA18", "HUB_OFMIGUEL"] 
