@@ -70,6 +70,7 @@ class TransitionError(Exception):
 	def __init__(self, message):
 		self.message = message
 
+
 if __name__ == "__main__":
 	try:
 		hubs = model_settings.HUBS
@@ -92,12 +93,19 @@ if __name__ == "__main__":
 				pass
 			else:
 				missing_hubs.append(hub)
-		#todo: hacer que solamente no procese los archivos de la tabla que falta
+		if len(missing_hubs) > 0:
+			from server_tools import mandar_mail_notificacion
+			for hub in missing_hubs:
+				print("No llegaron datos de HUB %s"%(hub))
+				fecha = time.strftime("%Y%m%d-%H%M%S")
+				with open(model_settings.LOG_FILE, "a") as logFile:
+					logFile.write("No llegaron datos de %s %s\n"%(hub,fecha))
+					mandar_mail_notificacion("No llegaron datos de %s"%(hub), model_settings.notification_mail)
+					time.sleep(5)
+
 		for tabla in hubs_dict.keys():
 			if any(hub in missing_hubs for hub in hubs_dict[tabla]):
-				from server_tools import mandar_mail_notificacion
-				print("No llegaron datos de HUB %s"%(hub))
-				mandar_mail_notificacion("No llegaron datos de HUB %s"%(hub), model_settings.notification_mail)
+				#si faltan datos de un hub de esta tabla se detiene el proceso para esa tabla
 				continue
 			DF = append_entries_json(dirPATH)    #aca voy a tener en un DF todos los datos obtenidos de los HUBs desde la ultima vez que se corrio este script
 			DF_tabla = DF[DF["HUB"].isin(hubs_dict[tabla])]
