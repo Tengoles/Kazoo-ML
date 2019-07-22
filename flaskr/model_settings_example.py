@@ -46,6 +46,6 @@ LOG_FILE=  "/home/ubuntu/Kazoo-ML/flaskr/logs/messages.log"
 
 engine_string = 'postgresql://user:passwd@localhost:5432/db_name'
 
-HUBS = get_hubs()
+HUBS = get_hubs() #get_hubs() va a dar una lista de tuplas (hub, tabla)
 
 notification_mail = "enzo.tng@gmail.com"
