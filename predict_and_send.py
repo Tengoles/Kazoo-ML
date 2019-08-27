@@ -20,7 +20,7 @@ import time
 import pickle
 from xgboost import XGBClassifier
 
-ENDPOINT_URL = 'https://api.kazooanalytics.com/api/v2/hub/logs'
+ENDPOINT_URL = 'https://api.qa.kazooanalytics.com/api/v2/hub/logs'
 
 def append_entries_json(dirPATH):
 	files = os.listdir(dirPATH)
@@ -64,7 +64,10 @@ def process_and_send(dataset):
 		req.add_header('Content-Encoding', 'application/octet-stream')
 		response = urllib.request.urlopen(req)
 		content  =  response.read()
-		print("Enviado, respuesta: " + str(response.getcode()))
+		with open(model_settings.LOG_FILE, "a") as logFile:
+			logFile.write("Enviado %s a Kazoo, respuesta: %s\n "%(zona,str(response.getcode())))
+		print("Enviado %s a Kazoo, respuesta: %s\n "%(zona,str(response.getcode())))
+		print("Contenido: %s\n"%(content))
 
 class TransitionError(Exception):
 	def __init__(self, message):
@@ -118,7 +121,7 @@ if __name__ == "__main__":
 			MACS = DF_tabla.MAC.unique()
 			print("Empiezo a armar dataset de %s"%(tabla))
 			for mac in MACS:
-				DF_mac = DF.loc[DF_tabla['MAC'] == mac].sort_values(by='fechahora')
+				DF_mac = DF_tabla.loc[DF_tabla['MAC'] == mac].sort_values(by='fechahora')
 				for i in range(len(DF_mac) - 1):
 					dataset.loc[dataset_i, DF_mac.iloc[i].HUB] = float(DF_mac.iloc[i].RSSI)
 					probe_delta = DF_mac.iloc[i + 1].fechahora - DF_mac.iloc[i].fechahora
