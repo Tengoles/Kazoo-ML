@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import json
 import time
+import math
 #from sklearn import model_selection
 #from sklearn.metrics import classification_report
 #from sklearn.metrics import confusion_matrix
@@ -39,20 +40,27 @@ def append_entries_json(dirPATH):
 # informacion y lo envia como la informacion de varios falsos HUB
 def process_and_send(dataset):
 	for zona in list(dataset.Zona.unique()):
-		reduced_file_data = []
+		if zona == "Afuera":
+			continue
 		print("Procesando " + zona)
+		reduced_file_data = []
 		data_zona = dataset[dataset['Zona'] == zona]
 		for row in data_zona.itertuples():
+			for column in row:
+				if math.isnan(column):
+					pass
+				else:
+					RSSI = column
+					break
 			entry = {'datetime': str(row.fechahora),
 					 'mac_phone': row.MAC,
-					 'rssi': str(-69)} #todo: encontrar un valor mas representativo para este campo
+					 'rssi': RSSI}
 			reduced_file_data.append(entry)
 
 		data_to_send = {
 			'hub_identificator': zona,
 			'data': reduced_file_data
 		}
-
 		print("Enviando " + zona)
 		data_to_send = json.dumps(data_to_send)
 		print("Comprimiendo")
@@ -63,11 +71,11 @@ def process_and_send(dataset):
 		req.add_header('Content-Length', '%d' % len(compressed_data_to_send))
 		req.add_header('Content-Encoding', 'application/octet-stream')
 		response = urllib.request.urlopen(req)
-		content  =  response.read()
+		content = response.read()
 		with open(model_settings.LOG_FILE, "a") as logFile:
-			logFile.write("Enviado %s a Kazoo, respuesta: %s\n "%(zona,str(response.getcode())))
-		print("Enviado %s a Kazoo, respuesta: %s\n "%(zona,str(response.getcode())))
-		print("Contenido: %s\n"%(content))
+			logFile.write("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
+		print("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
+		print("Contenido: %s\n" % content)
 
 class TransitionError(Exception):
 	def __init__(self, message):
@@ -94,6 +102,7 @@ if __name__ == "__main__":
 			hubs_dict.setdefault(tabla, []).append(hub)
 			if any(hub in file for file in json_files):
 				pass
+			#si no hay archivos JSON de un Hub que tendria que haber se guarda su nombre en missing_hubs
 			else:
 				missing_hubs.append(hub)
 		if len(missing_hubs) > 0:
@@ -110,7 +119,8 @@ if __name__ == "__main__":
 			if any(hub in missing_hubs for hub in hubs_dict[tabla]):
 				#si faltan datos de un hub de esta tabla se detiene el proceso para esa tabla
 				continue
-			DF = append_entries_json(dirPATH)    #aca voy a tener en un DF todos los datos obtenidos de los HUBs desde la ultima vez que se corrio este script
+			# DF va a tener todos los datos obtenidos de los HUBs desde la ultima vez que se corrio este script
+			DF = append_entries_json(dirPATH)
 			DF_tabla = DF[DF["HUB"].isin(hubs_dict[tabla])]
 			columns = hubs_dict[tabla]
 			columns.append('MAC')
@@ -131,19 +141,20 @@ if __name__ == "__main__":
 						dataset.loc[dataset_i, 'MAC'] = mac
 						dataset.loc[dataset_i, 'fechahora'] = DF_mac.iloc[i].fechahora
 						dataset_i += 1
-
-			array = dataset.dropna(thresh=6).values
+			#array = dataset.dropna(thresh=6).values
+			array = dataset.values
 			X = array[:, 0:(len(dataset.columns) - 3)]
 			model = pickle.load(open(model_settings.train_data_path + tabla + "_model.sav", 'rb'))
 			Y = model.predict(X)
-			dataset2 = dataset.dropna(thresh=6)
-			dataset2 = dataset2.reset_index(drop = True)
-			dataset2['Zona'] = pd.DataFrame(Y)
-			dataset2 = dataset2.sort_values(by='fechahora')
-			process_and_send(dataset2)
+			#dataset2 = dataset.dropna(thresh=6)
+			#dataset2 = dataset2.reset_index(drop=True)
+			#dataset2['Zona'] = pd.DataFrame(Y)
+			#dataset2 = dataset2.sort_values(by='fechahora')
+			process_and_send(dataset)
+			dataset['Zona'] = pd.DataFrame(Y)
 			print("Trato de insertar a %s"%(tabla))
 			engine = create_engine(model_settings.engine_string)
-			dataset2.to_sql(tabla, engine, if_exists='append', index=False)
+			dataset.to_sql(tabla, engine, if_exists='append', index=False)
 			print("Lo logre")
 			for file in json_files:
 				for hub in hubs_dict[tabla]:
