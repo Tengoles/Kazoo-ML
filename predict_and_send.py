@@ -158,7 +158,6 @@ if __name__ == "__main__":
 			engine = create_engine(model_settings.engine_string)
 			dataset.to_sql(tabla, engine, if_exists='append', index=False)
 			print("Lo logre")
-			"""
 			for file in json_files:
 				for hub in hubs_dict[tabla]:
 					if hub in file:
@@ -166,7 +165,7 @@ if __name__ == "__main__":
 							os.makedirs("%s%s"%(model_settings.predict_data_path, tabla))
 						command = "mv %s%s %s%s" %(model_settings.predict_data_path, file, model_settings.predict_data_path, tabla)
 						print(command)
-						os.system(command)"""
+						os.system(command)
 			fecha = time.strftime("%Y%m%d-%H%M%S")
 			msg = "Datos procesados y movidos " + fecha + '\n'
 			print(msg)
