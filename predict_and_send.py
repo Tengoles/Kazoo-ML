@@ -72,8 +72,8 @@ def process_and_send(dataset):
 		req.add_header('Content-Encoding', 'application/octet-stream')
 		response = urllib.request.urlopen(req)
 		content = response.read()
-		#with open(model_settings.LOG_FILE, "a") as logFile:
-			#logFile.write("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
+		with open(model_settings.LOG_FILE, "a") as logFile:
+			logFile.write("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
 		print("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
 		print("Contenido: %s\n" % content)
 
@@ -110,11 +110,11 @@ if __name__ == "__main__":
 			for hub in missing_hubs:
 				print("No llegaron datos de HUB %s"%(hub))
 
-				"""fecha = time.strftime("%Y%m%d-%H%M%S")
+				fecha = time.strftime("%Y%m%d-%H%M%S")
 				with open(model_settings.LOG_FILE, "a") as logFile:
 					logFile.write("No llegaron datos de %s %s\n"%(hub,fecha))
 					mandar_mail_notificacion("No llegaron datos de %s"%(hub), model_settings.notification_mail)
-					time.sleep(5)"""
+					time.sleep(5)
 
 		for tabla in hubs_dict.keys():
 			if any(hub in missing_hubs for hub in hubs_dict[tabla]):
