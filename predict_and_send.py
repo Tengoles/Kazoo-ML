@@ -65,15 +65,15 @@ def process_and_send(dataset):
 		data_to_send = json.dumps(data_to_send)
 		print("Comprimiendo")
 		compressed_data_to_send = zlib.compress(data_to_send.encode('utf-8'))
-		print ('>>> ' + str(sys.getsizeof(data_to_send)))
-		print ('>>> ' + str(sys.getsizeof(compressed_data_to_send)))
+		print('>>> ' + str(sys.getsizeof(data_to_send)))
+		print('>>> ' + str(sys.getsizeof(compressed_data_to_send)))
 		req = urllib.request.Request(ENDPOINT_URL, compressed_data_to_send)
 		req.add_header('Content-Length', '%d' % len(compressed_data_to_send))
 		req.add_header('Content-Encoding', 'application/octet-stream')
 		response = urllib.request.urlopen(req)
 		content = response.read()
-		with open(model_settings.LOG_FILE, "a") as logFile:
-			logFile.write("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
+		#with open(model_settings.LOG_FILE, "a") as logFile:
+			#logFile.write("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
 		print("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
 		print("Contenido: %s\n" % content)
 
@@ -109,11 +109,12 @@ if __name__ == "__main__":
 			from server_tools import mandar_mail_notificacion
 			for hub in missing_hubs:
 				print("No llegaron datos de HUB %s"%(hub))
-				fecha = time.strftime("%Y%m%d-%H%M%S")
+
+				"""fecha = time.strftime("%Y%m%d-%H%M%S")
 				with open(model_settings.LOG_FILE, "a") as logFile:
 					logFile.write("No llegaron datos de %s %s\n"%(hub,fecha))
 					mandar_mail_notificacion("No llegaron datos de %s"%(hub), model_settings.notification_mail)
-					time.sleep(5)
+					time.sleep(5)"""
 
 		for tabla in hubs_dict.keys():
 			if any(hub in missing_hubs for hub in hubs_dict[tabla]):
@@ -130,7 +131,8 @@ if __name__ == "__main__":
 			dataset_i = 0 #indice de fila para ir recorriendo el dataset final que voy crear
 			MACS = DF_tabla.MAC.unique()
 			print("Empiezo a armar dataset de %s"%(tabla))
-			for mac in MACS:
+			for (index, mac) in enumerate(MACS):
+				print("%s/%s"%(index, len(MACS)))
 				DF_mac = DF_tabla.loc[DF_tabla['MAC'] == mac].sort_values(by='fechahora')
 				for i in range(len(DF_mac) - 1):
 					dataset.loc[dataset_i, DF_mac.iloc[i].HUB] = float(DF_mac.iloc[i].RSSI)
@@ -141,21 +143,22 @@ if __name__ == "__main__":
 						dataset.loc[dataset_i, 'MAC'] = mac
 						dataset.loc[dataset_i, 'fechahora'] = DF_mac.iloc[i].fechahora
 						dataset_i += 1
+			dataset = dataset.sort_values(by="fechahora")
 			#array = dataset.dropna(thresh=6).values
+			print("Se armo el dataset de %s"%(tabla))
 			array = dataset.values
 			X = array[:, 0:(len(dataset.columns) - 3)]
 			model = pickle.load(open(model_settings.train_data_path + tabla + "_model.sav", 'rb'))
 			Y = model.predict(X)
 			#dataset2 = dataset.dropna(thresh=6)
-			#dataset2 = dataset2.reset_index(drop=True)
-			#dataset2['Zona'] = pd.DataFrame(Y)
-			#dataset2 = dataset2.sort_values(by='fechahora')
-			process_and_send(dataset)
+			dataset = dataset.reset_index(drop=True)
 			dataset['Zona'] = pd.DataFrame(Y)
+			process_and_send(dataset)
 			print("Trato de insertar a %s"%(tabla))
 			engine = create_engine(model_settings.engine_string)
 			dataset.to_sql(tabla, engine, if_exists='append', index=False)
 			print("Lo logre")
+			"""
 			for file in json_files:
 				for hub in hubs_dict[tabla]:
 					if hub in file:
@@ -163,7 +166,7 @@ if __name__ == "__main__":
 							os.makedirs("%s%s"%(model_settings.predict_data_path, tabla))
 						command = "mv %s%s %s%s" %(model_settings.predict_data_path, file, model_settings.predict_data_path, tabla)
 						print(command)
-						os.system(command)
+						os.system(command)"""
 			fecha = time.strftime("%Y%m%d-%H%M%S")
 			msg = "Datos procesados y movidos " + fecha + '\n'
 			print(msg)
