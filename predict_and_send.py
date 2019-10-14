@@ -54,7 +54,7 @@ def process_and_send(dataset):
 					break
 			entry = {'datetime': str(row.fechahora),
 					 'mac_phone': row.MAC,
-					 'rssi': RSSI}
+					 'rssi': str(RSSI)}
 			reduced_file_data.append(entry)
 
 		data_to_send = {
