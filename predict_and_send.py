@@ -46,15 +46,15 @@ def process_and_send(dataset):
 		reduced_file_data = []
 		data_zona = dataset[dataset['Zona'] == zona]
 		for row in data_zona.itertuples():
-			for column in row:
-				if math.isnan(column):
-					pass
-				else:
-					RSSI = column
-					break
+			#for column in row:
+				#if math.isnan(column):
+					#pass
+				#else:
+					#RSSI = column
+					#break
 			entry = {'datetime': str(row.fechahora),
 					 'mac_phone': row.MAC,
-					 'rssi': str(RSSI)}
+					 'rssi': str(-69)}
 			reduced_file_data.append(entry)
 
 		data_to_send = {
