@@ -85,7 +85,7 @@ class TransitionError(Exception):
 if __name__ == "__main__":
 	try:
 		hubs = model_settings.HUBS
-		#invierto los elementos de la lista de tuplas para que queden (tabla,hub) y no (hub,tabla)
+		#hubs es una lista de tuplas de la forma (tabla,hub)
 		hubs = [hub[::-1] for hub in hubs]
 		dirPATH = model_settings.predict_data_path
 		files = os.listdir(dirPATH)
@@ -105,28 +105,31 @@ if __name__ == "__main__":
 			#si no hay archivos JSON de un Hub que tendria que haber se guarda su nombre en missing_hubs
 			else:
 				missing_hubs.append(hub)
-		if len(missing_hubs) > 0:
-			from server_tools import mandar_mail_notificacion
-			for hub in missing_hubs:
-				print("No llegaron datos de HUB %s"%(hub))
+		#if len(missing_hubs) > 0:
+			#from server_tools import mandar_mail_notificacion
+			#notificacion  = ""
+			#for hub in missing_hubs:
+				#print("No llegaron datos de HUB %s"%(hub))
 
-				fecha = time.strftime("%Y%m%d-%H%M%S")
-				with open(model_settings.LOG_FILE, "a") as logFile:
-					logFile.write("No llegaron datos de %s %s\n"%(hub,fecha))
-					mandar_mail_notificacion("No llegaron datos de %s"%(hub), model_settings.notification_mail)
-					time.sleep(5)
+				#fecha = time.strftime("%Y%m%d-%H%M%S")
+				#with open(model_settings.LOG_FILE, "a") as logFile:
+					#logFile.write("No llegaron datos de %s %s\n"%(hub,fecha))
+				#notificacion += "No llegaron datos de %s \n"
+			#mandar_mail_notificacion("No llegaron datos de %s"%(hub), model_settings.notification_mail)
 
 		for tabla in hubs_dict.keys():
-			if any(hub in missing_hubs for hub in hubs_dict[tabla]):
+			#if any(hub in missing_hubs for hub in hubs_dict[tabla]):
 				#si faltan datos de un hub de esta tabla se detiene el proceso para esa tabla
-				continue
+				#continue
 			# DF va a tener todos los datos obtenidos de los HUBs desde la ultima vez que se corrio este script
 			DF = append_entries_json(dirPATH)
+			# DF_tabla se queda con los datos que pertenecen a un unico modelo
 			DF_tabla = DF[DF["HUB"].isin(hubs_dict[tabla])]
 			columns = hubs_dict[tabla]
 			columns.append('MAC')
 			columns.append('fechahora')
 			columns.append('Zona')
+			# En dataset se van a armar los datos en el formato necesario para pasarselo al modelo
 			dataset = pd.DataFrame(columns=columns).astype(np.int)
 			dataset_i = 0 #indice de fila para ir recorriendo el dataset final que voy crear
 			MACS = DF_tabla.MAC.unique()
@@ -135,7 +138,7 @@ if __name__ == "__main__":
 				print("%s/%s"%(index, len(MACS)))
 				DF_mac = DF_tabla.loc[DF_tabla['MAC'] == mac].sort_values(by='fechahora')
 				for i in range(len(DF_mac) - 1):
-					dataset.loc[dataset_i, DF_mac.iloc[i].HUB] = float(DF_mac.iloc[i].RSSI)
+					dataset.loc[dataset_i, DF_mac.iloc[i].HUB] = float(DF_mac.iloc[i].RSSI) #no se porque lo casteo a float y no int
 					probe_delta = DF_mac.iloc[i + 1].fechahora - DF_mac.iloc[i].fechahora
 					if probe_delta < timedelta(seconds=2.5): #aca quiero buscar la lineas que son parte de la misma rafaga de probe request
 						pass
