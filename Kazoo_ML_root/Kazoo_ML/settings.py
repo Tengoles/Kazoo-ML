@@ -25,12 +25,13 @@ SECRET_KEY = 'k=^rld@f$y1#2bh05ld4itxp5mer_)(#5t&^zg()=uj5^e5ft_'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '54.91.231.144']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'store_json.apps.StoreJsonConfig',
     'pages.apps.PagesConfig',
     'django.contrib.admin',
     'django.contrib.auth',
