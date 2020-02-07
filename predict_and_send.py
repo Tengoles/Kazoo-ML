@@ -165,7 +165,7 @@ if __name__ == "__main__":
 			print("Se armo el dataset de %s"%(tabla))
 			array = dataset.values
 			X = array[:, 0:(len(dataset.columns) - 3)]
-			model = pickle.load(open(model_settings.train_data_path + tabla + "_model.sav", 'rb'))
+			model = pickle.load(open(model_settings.train_data_path +tabla + "/" + tabla + "_model.sav", 'rb'))
 			Y = model.predict(X)
 			#dataset2 = dataset.dropna(thresh=6)
 			dataset = dataset.reset_index(drop=True)
@@ -196,4 +196,4 @@ if __name__ == "__main__":
 		with open(model_settings.LOG_FILE, "a") as logFile:
 			logFile.write(error)
 		from server_tools import mandar_mail_notificacion
-		mandar_mail_notificacion(e.message, model_settings.notification_mail)
+		mandar_mail_notificacion(str(e), model_settings.notification_mail)
