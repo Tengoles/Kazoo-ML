@@ -34,5 +34,29 @@ def missing_hubs_PCSEST():
 			#si no hay archivos JSON de un Hub que tendria que haber se guarda su nombre en missing_hubs
 		else:
 			missing_hubs.append(hub)
-			print(hub)
+			#print(hub)
 	return missing_hubs
+
+def find_data_gaps(path, hub):
+	import os
+	from datetime import datetime, timedelta
+	files = os.listdir(path)
+	hub_dates = []
+	print("HUB: %s"%(hub))
+	for file in files:
+		if hub in file:
+			hub_dates.append(datetime.strptime(file[0:15], "%Y%m%d-%H%M%S") - timedelta(hours=3))
+	hub_dates = sorted(hub_dates)
+	print(hub_dates[-50:-1])
+	for i, date in enumerate(hub_dates[:-1]):
+		date1 = date
+		date2 = hub_dates[i+1]
+		delta = date2 - date1
+		if delta.seconds > 3600:
+			print(date1)
+			print(date2)
+			print("-------------")
+	
+if __name__ == "__main__":
+	find_data_gaps("/home/ubuntu/Kazoo-ML/flaskr/predict_data/PCSEST", "PCSEST_B1_19")
+	
