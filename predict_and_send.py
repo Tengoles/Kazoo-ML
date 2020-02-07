@@ -39,6 +39,30 @@ def append_entries_json(dirPATH):
 # esta funcion agarra el dataset, le modifica el formato de la
 # informacion y lo envia como la informacion de varios falsos HUB
 def process_and_send(dataset):
+	def send(reduced_file_data, zona, ENDPOINT):
+		data_to_send = {
+			'hub_identificator': zona,
+			'data': reduced_file_data
+		}
+		print("Enviando " + zona)
+		data_to_send = json.dumps(data_to_send)
+		print("Comprimiendo")
+		compressed_data_to_send = zlib.compress(data_to_send.encode('utf-8'))
+		print('>>> ' + str(sys.getsizeof(data_to_send)))
+		print('>>> ' + str(sys.getsizeof(compressed_data_to_send)))
+		req = urllib.request.Request(ENDPOINT, compressed_data_to_send)
+		req.add_header('Content-Length', '%d' % len(compressed_data_to_send))
+		req.add_header('Content-Encoding', 'application/octet-stream')
+		response = urllib.request.urlopen(req)
+		content = response.read()
+		if response.getcode() // 100 == 2: 
+			with open(model_settings.LOG_FILE, "a") as logFile:
+				logFile.write("Enviado %s a %s, respuesta: %s\n" % (zona, ENDPOINT, str(response.getcode())))
+			print("Enviado %s a %s, respuesta: %s\n" % (zona, ENDPOINT, str(response.getcode())))
+			print("Contenido: %s\n" % content)
+		else:
+			with open(model_settings.LOG_FILE, "a") as logFile:
+				logFile.write("Problemas al mandar %s a %s, respuesta: %s\n" % (zona, ENDPOINT, str(response.getcode())))
 	for zona in list(dataset.Zona.unique()):
 		if zona == "Afuera":
 			continue
@@ -57,25 +81,15 @@ def process_and_send(dataset):
 					 'rssi': str(-69)}
 			reduced_file_data.append(entry)
 
-		data_to_send = {
-			'hub_identificator': zona,
-			'data': reduced_file_data
-		}
-		print("Enviando " + zona)
-		data_to_send = json.dumps(data_to_send)
-		print("Comprimiendo")
-		compressed_data_to_send = zlib.compress(data_to_send.encode('utf-8'))
-		print('>>> ' + str(sys.getsizeof(data_to_send)))
-		print('>>> ' + str(sys.getsizeof(compressed_data_to_send)))
-		req = urllib.request.Request(ENDPOINT_URL, compressed_data_to_send)
-		req.add_header('Content-Length', '%d' % len(compressed_data_to_send))
-		req.add_header('Content-Encoding', 'application/octet-stream')
-		response = urllib.request.urlopen(req)
-		content = response.read()
-		with open(model_settings.LOG_FILE, "a") as logFile:
-			logFile.write("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
-		print("Enviado %s a Kazoo, respuesta: %s\n " % (zona, str(response.getcode())))
-		print("Contenido: %s\n" % content)
+		send(reduced_file_data, zona, ENDPOINT_URL)
+		#if zona == "A2":
+			#send(reduced_file_data, 'A2', 'https://api.kazooanalytics.com/api/v2/hub/logs')
+			#send(reduced_file_data, 'A2 nuevo 3600', 'https://api.kazooanalytics.com/api/v2/hub/logs')
+			#send(reduced_file_data, 'A2 publi', 'https://api.kazooanalytics.com/api/v2/hub/logs')
+			#send(reduced_file_data, 'A2 3600', ENDPOINT_URL)
+
+
+
 
 class TransitionError(Exception):
 	def __init__(self, message):
