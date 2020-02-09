@@ -1,4 +1,6 @@
 import psycopg2
+import os
+
 def connect():
     """ Connect to the PostgreSQL database server """
     conn = None
@@ -32,11 +34,6 @@ def get_hubs():
     cur.execute(query)
     hubs = cur.fetchall()
     return hubs
-
-MACS = ['5c:70:a3:0e:28:b2', '04:d6:aa:69:da:f1']     #estas serian las MACs usadas para entrenar el modelo
-
-test_times = [[('20190411-115300', '20190411-120000')], [('20190411-120400','20190411-121200')],
-                  [('20190411-121400', '20190411-122300')], [('20190411-125700','20190411-130700')]]  # rangos de tiempo en los que se realizo cada entrenamiento, uno por cada clase
 
 train_data_path = "/home/ubuntu/Kazoo-ML/flaskr/train_data/"
 
