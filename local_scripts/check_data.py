@@ -1,3 +1,7 @@
+#Este script hace querys a la tabla de la base de datos que contiene los datos de PCSEST 
+#Con esos datos se calculan Visitas totales, visitas recurrentes y visitas unicas. 
+#Fue usado para comparar con los calculos que hace el servidor
+
 import os
 from datetime import datetime, timedelta
 import pandas as pd

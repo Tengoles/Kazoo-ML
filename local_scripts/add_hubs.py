@@ -1,3 +1,6 @@
+# Usado para agregar hubs a la tabla que asocia Hubs con su modelo de ML
+# predict_and_send usa esa tabla procesar todos los archivos recibidos
+
 from sqlalchemy import create_engine
 import pandas as pd
 from flaskr import model_settings
