@@ -11,7 +11,8 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
-
+from pathlib import Path
+import logging
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -27,7 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880*2
 # Application definition
 
 INSTALLED_APPS = [
@@ -40,6 +41,75 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
+#os.path.join(str(Path(__file__).parents[2]), "logs", "general_log.log"),
+"""LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt' : "%d/%b/%Y %H:%M:%S"
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(str(Path(__file__).parents[2]), "logs", "general_log.log"),
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django.request': {
+                'handlers': ['file'],
+                'level': 'ERROR',
+                'propagate': False,
+            },
+    },
+}"""
+#'filename': os.path.join(str(Path(__file__).parents[2]), "logs", "general_log.log"),
+LOGGING = {
+    'version': 1,
+    # Version of logging
+    'disable_existing_loggers': False,
+    #disable logging 
+    # formatters #############################################################
+    'formatters': {
+        'verbose': {
+            'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt' : "%d/%b/%Y %H:%M:%S"
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    # Handlers #############################################################
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(str(Path(__file__).parents[2]), "logs", "general_log.log"),
+            'formatter': 'verbose',
+        },
+########################################################################
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    # Loggers ####################################################################
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO')
+        },
+    },
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
