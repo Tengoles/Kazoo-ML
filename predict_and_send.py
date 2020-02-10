@@ -1,5 +1,5 @@
 import sys
-from flaskr import model_settings
+import ml_settings
 from datetime import datetime, timedelta
 import os
 import traceback
@@ -12,12 +12,6 @@ import numpy as np
 import json
 import time
 import math
-#from sklearn import model_selection
-#from sklearn.metrics import classification_report
-#from sklearn.metrics import confusion_matrix
-#from sklearn.metrics import accuracy_score
-#from sklearn.model_selection import StratifiedKFold
-#from sklearn.model_selection import StratifiedShuffleSplit
 import pickle
 from xgboost import XGBClassifier
 
@@ -82,11 +76,6 @@ def process_and_send(dataset):
 			reduced_file_data.append(entry)
 
 		send(reduced_file_data, zona, ENDPOINT_URL)
-		#if zona == "A2":
-			#send(reduced_file_data, 'A2', 'https://api.kazooanalytics.com/api/v2/hub/logs')
-			#send(reduced_file_data, 'A2 nuevo 3600', 'https://api.kazooanalytics.com/api/v2/hub/logs')
-			#send(reduced_file_data, 'A2 publi', 'https://api.kazooanalytics.com/api/v2/hub/logs')
-			#send(reduced_file_data, 'A2 3600', ENDPOINT_URL)
 
 
 
@@ -101,7 +90,7 @@ if __name__ == "__main__":
 		hubs = model_settings.HUBS
 		#hubs es una lista de tuplas de la forma (tabla,hub)
 		hubs = [hub[::-1] for hub in hubs]
-		dirPATH = model_settings.predict_data_path
+		dirPATH = ml_settings.predict_data_path
 		files = os.listdir(dirPATH)
 		json_files = []
 		for file in files:
@@ -119,17 +108,6 @@ if __name__ == "__main__":
 			#si no hay archivos JSON de un Hub que tendria que haber se guarda su nombre en missing_hubs
 			else:
 				missing_hubs.append(hub)
-		#if len(missing_hubs) > 0:
-			#from server_tools import mandar_mail_notificacion
-			#notificacion  = ""
-			#for hub in missing_hubs:
-				#print("No llegaron datos de HUB %s"%(hub))
-
-				#fecha = time.strftime("%Y%m%d-%H%M%S")
-				#with open(model_settings.LOG_FILE, "a") as logFile:
-					#logFile.write("No llegaron datos de %s %s\n"%(hub,fecha))
-				#notificacion += "No llegaron datos de %s \n"
-			#mandar_mail_notificacion("No llegaron datos de %s"%(hub), model_settings.notification_mail)
 
 		for tabla in hubs_dict.keys():
 			#if any(hub in missing_hubs for hub in hubs_dict[tabla]):

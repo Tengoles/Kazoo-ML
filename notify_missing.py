@@ -1,6 +1,6 @@
 import server_tools
 from datetime import datetime, timedelta
-from flaskr import model_settings
+import ml_settings
 
 
 missing_hubs = server_tools.missing_hubs_PCSEST()
@@ -12,9 +12,8 @@ if len(missing_hubs) > 0:
 	message = "El %s a las %s faltaron estos Hubs:\n"%(date, time)
 	for hub in missing_hubs:
 		message = message + hub + "\n"
-
-	server_tools.mandar_mail_notificacion(message, "enzo.tng@gmail.com")
-	server_tools.mandar_mail_notificacion(message, "ariel.pacilio@kazoo.com.uy")
+	for mail in ml_settings.notification_mails:
+		server_tools.mandar_mail_notificacion(message, mail)
 	with open(model_settings.LOG_FILE, "a") as logFile:
 		logFile.write(message + "\n")
 	print(message)
