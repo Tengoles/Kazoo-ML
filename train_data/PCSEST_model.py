@@ -5,6 +5,7 @@ import numpy as np
 from datetime import timedelta
 from xgboost import XGBClassifier
 import pickle
+from pathlib import Path
 from sklearn.metrics import accuracy_score
 
 def append_entries_json(dirPATH):
