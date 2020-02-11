@@ -165,7 +165,7 @@ if __name__ == "__main__":
 			print("Se armo el dataset de %s"%(tabla))
 			array = dataset.values
 			X = array[:, 0:(len(dataset.columns) - 3)]
-			model = pickle.load(open(model_settings.train_data_path +tabla + "/" + tabla + "_model.sav", 'rb'))
+			model = pickle.load(open(os.path.join(model_settings.train_data_path,tabla, tabla + "_model.sav"), 'rb'))
 			Y = model.predict(X)
 			#dataset2 = dataset.dropna(thresh=6)
 			dataset = dataset.reset_index(drop=True)

@@ -14,7 +14,7 @@ def append_entries_json(dirPATH):
 	for f in files:
 		print(f)
 		if ".json" in f:
-			with open(dirPATH + f) as json_file:
+			with open(os.path.join(dirPATH, f)) as json_file:
 				data_cruda.extend(json.loads(json_file.read()))
 	DF = pd.DataFrame(data_cruda)
 	DF['fechahora'] = pd.to_datetime(DF['fechahora'], format="%Y-%m-%d %H:%M:%S.%f")
@@ -49,7 +49,7 @@ def df_to_dataset(df):
 if __name__ == "__main__":
     train_macs = ["5c:70:a3:0e:28:b2", "14:5a:05:7f:e2:a9", "04:d6:aa:69:da:f1", "18:21:95:c2:4a:1a"]
     Classes = ['E2', 'E1', 'E3','B1', 'A1', 'C1', 'C2', 'A2', 'EURO', 'Afuera']  # estas son las zonas en las cuales quiero que el modelo aprenda que los celulares van
-    test_times = [[('20191001-152000', '20191001-154700')],
+    train_times = [[('20191001-152000', '20191001-154700')],
                 [('20191001-154800', '20191001-160500')],
                 [('20191001-160730', '20191001-162300')],
                 [('20191001-162500', '20191001-164600')],
@@ -59,10 +59,10 @@ if __name__ == "__main__":
                 [('20191002-110000', '20191002-112200')],
                 [('20191002-113000', '20191002-120000')],
                 [('20191002-120100', '20191002-123400'), ('20191016-153000', '20191016-154000'), ('20191016-154500', '20191016-155500')]] # rangos de tiempo en los que se realizo cada entrenamiento, uno por cada clase
-    print(test_times[-1][-1][1])
-    dirPATH = "C:\\Users\\enzot\\Documents\\Kazoo\\Datos_estacionamiento\\"
+    print(train_times[-1][-1][1])
+    dirPATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PCSEST")
     DF = append_entries_json(dirPATH).sort_values(by="fechahora")
-    DF_filtrado = DF.loc[(DF['fechahora'] > test_times[0][0][0]) & (DF['fechahora'] < test_times[-1][-1][1])]
+    DF_filtrado = DF.loc[(DF['fechahora'] > train_times[0][0][0]) & (DF['fechahora'] < train_times[-1][-1][1])]
     DF_filtrado = DF_filtrado[DF_filtrado["MAC"].isin(train_macs)]
     # las columnas de el dataset van a ser el RSSI en cada Hub, la zona a la que pertenecen esas lecturas y el datetime de cada burst
     columns = list(DF_filtrado.HUB.unique())
@@ -74,11 +74,11 @@ if __name__ == "__main__":
     dataset_i = 0 #indice de fila para ir recorriendo el dataset final que voy creando
     print("Empiezo a armar el dataset")
     files = os.listdir(dirPATH)
-    if 'dataset.pkl' in files:
-        #dataset = pickle.load(open(dirPATH + 'dataset.pkl', 'rb'))
+    if 'train_dataset_PCSEST.pkl' in files:
+        dataset = pickle.load(open(os.path.join(dirPATH, 'train_dataset_PCSEST.pkl'), 'rb'))
         pass
     else:
-        for (periodos_zona,zona) in zip(test_times, Classes):
+        for (periodos_zona,zona) in zip(train_times, Classes):
             print("Armando " + str(zona))
             DF_zona = pd.DataFrame()
             for periodo_zona in periodos_zona:
@@ -98,7 +98,7 @@ if __name__ == "__main__":
                         dataset.loc[dataset_i, 'MAC'] = mac
                         dataset.loc[dataset_i, 'fechahora'] = DF_mac.iloc[i].fechahora
                         dataset_i += 1
-        dataset.to_pickle(dirPATH + "dataset.pkl")
+        dataset.to_pickle(dirPATH + "train_dataset_PCSEST.pkl")
     dataset = dataset.sort_values(by='fechahora')
     """for zona in Classes:
         print(zona)
@@ -129,4 +129,4 @@ if __name__ == "__main__":
     dataset["Prediction"] = predictions
     dataset["Accuracy"] = accuracies
     final_model = XGBClassifier().fit(X, Y)
-    #pickle.dump(final_model, open(dirPATH + "PCSEST_model.sav",'wb'))
+    pickle.dump(final_model, open(os.path.join(dirPATH, "PCSEST_model.sav",'wb')))
