@@ -1,0 +1,37 @@
+{% load static %}
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>
+	{% block title %}
+	Servidor de Kazoo para ML
+	{% endblock title %}
+</title>
+<link href="{% static 'main.css' %}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div id="wrapper">
+  <header id="header">
+    <div id="logo"><img src="{% static 'logo.jpg' %}" alt=""/></div>
+    <div id="topbanner"><img src="{% static 'top_banner.png' %}" width="800" height="200" alt=""/></div>    
+  </header>
+  <aside id="leftsidebar">
+    <nav id="nav">
+    <ul>
+	    {% block sidenav %}
+	    <li>Agregar Hubs</li><li>Ver actividad de Hubs</li><li>???</li>
+	    {% endblock sidenav %}
+    </ul>
+    </nav>
+  </aside>
+  <section id="main">
+    {% block content %}
+    <h1>Bienvenido!</h1>
+    <p>En esta pagina se puede interactuar con el servidor para hacer cosas</p>
+    {% endblock content %}
+  </section>
+  <footer id="footer">KAZOO Todos los derechos reservados 2020</footer>
+</div>
+</body>
+</html>
