@@ -4,6 +4,7 @@ import zlib
 from datetime import datetime
 import json
 import sys
+from sys import argv
 
 # Create your tests here.
 def process_file(filepath):
@@ -31,7 +32,7 @@ def process_file(filepath):
                 pass
     return data_cruda
     
-def test_store_json_compressed(ENDPOINT_URL="http://127.0.0.1:8000/store_json"):
+def test_store_json_compressed(ENDPOINT_URL="http://127.0.0.1:8000/store_json/"):
     data_to_send = process_file("test_data.txt")
     data_to_send2 = json.dumps(data_to_send, default=str)
     compressed_data_to_send = zlib.compress(data_to_send2.encode("UTF-8"))
@@ -41,7 +42,7 @@ def test_store_json_compressed(ENDPOINT_URL="http://127.0.0.1:8000/store_json"):
     print('>>> ' + str(sys.getsizeof(compressed_data_to_send)))
     print(response.status_code)
 
-def test_store_json(ENDPOINT_URL="http://127.0.0.1:8000/store_json"):
+def test_store_json(ENDPOINT_URL="http://127.0.0.1:8000/store_json/"):
     data_to_send = process_file("test_data.txt")
     data_to_send2 = json.dumps(data_to_send, default=str)
     print("sending data")
@@ -50,7 +51,12 @@ def test_store_json(ENDPOINT_URL="http://127.0.0.1:8000/store_json"):
 
 
 if __name__ == "__main__":
-    test_store_json()
-    test_store_json_compressed()
+	try:
+		ENDPOINT_URL = argv[1]
+		test_store_json(ENDPOINT_URL=ENDPOINT_URL)
+		test_store_json_compressed(ENDPOINT_URL=ENDPOINT_URL)
+	except Exception as e:
+		test_store_json()
+		test_store_json_compressed()
 
     

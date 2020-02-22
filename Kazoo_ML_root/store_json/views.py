@@ -7,8 +7,10 @@ import zlib
 import logging
 from pathlib import Path
 import time
+from datetime import datetime, timedelta
+from store_json.models import received
+from add_hubs.models import hubs
 
-#logger = logging.getLogger(os.path.join(str(Path(__file__).parents[2]), "logs"), "general_log.log")
 # Create your views here.
 @csrf_exempt
 def store_data(request):
@@ -24,6 +26,8 @@ def store_data(request):
         print(file_path)
         with open(file_path, 'a') as fout:
             json.dump(data, fout)
+        db_entry = received(received_datetime=datetime.now()-timedelta(hours=3),hub_name=hubs.objects.get(hub_name=data[0]['HUB']))
+        db_entry.save()
         return(HttpResponse("Aca se reciben datos en formato JSON"))
     else:
         return(HttpResponse("Aca se reciben datos en formato JSON"))
