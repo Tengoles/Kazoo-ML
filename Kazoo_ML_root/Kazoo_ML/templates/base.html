@@ -12,6 +12,16 @@
 </head>
 <body>
 <div id="wrapper">
+	<ul class="sidebar-nav">
+		{% block sidebar %}
+		{% if user.is_authenticated %}
+     		<li>User: {{ user.get_username }}</li>
+     		<li><a href="{% url 'logout'%}?next={{request.path}}">Logout</a></li>
+		{% else %}
+     		<li><a href="{% url 'login'%}?next={{request.path}}">Login</a></li>
+   		{% endif %}
+		{% endblock sidebar %}
+	</ul>
   <header id="header">
     <div id="logo"><img src="{% static 'logo.jpg' %}" alt=""/></div>
     <div id="topbanner"><img src="{% static 'top_banner.png' %}" width="800" height="200" alt=""/></div>    
@@ -20,15 +30,13 @@
     <nav id="nav">
     <ul>
 	    {% block sidenav %}
-	    <li>Agregar Hubs</li><li>Ver actividad de Hubs</li><li>???</li>
+	    <!--<li>Agregar Hubs</li><li>Ver actividad de Hubs</li><li>???</li>-->
 	    {% endblock sidenav %}
     </ul>
     </nav>
   </aside>
   <section id="main">
     {% block content %}
-    <h1>Bienvenido!</h1>
-    <p>En esta pagina se puede interactuar con el servidor para hacer cosas</p>
     {% endblock content %}
   </section>
   <footer id="footer">KAZOO Todos los derechos reservados 2020</footer>

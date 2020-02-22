@@ -34,6 +34,8 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880*2
 INSTALLED_APPS = [
     'store_json.apps.StoreJsonConfig',
     'pages.apps.PagesConfig',
+	'ml_data.apps.MlDataConfig',
+	'add_hubs.apps.AddHubsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,36 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
-#os.path.join(str(Path(__file__).parents[2]), "logs", "general_log.log"),
-"""LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
-            'datefmt' : "%d/%b/%Y %H:%M:%S"
-        },
-        'simple': {
-            'format': '%(levelname)s %(message)s'
-        },
-    },
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(str(Path(__file__).parents[2]), "logs", "general_log.log"),
-            'formatter': 'verbose',
-        },
-    },
-    'loggers': {
-        'django.request': {
-                'handlers': ['file'],
-                'level': 'ERROR',
-                'propagate': False,
-            },
-    },
-}"""
-#'filename': os.path.join(str(Path(__file__).parents[2]), "logs", "general_log.log"),
 LOGGING = {
     'version': 1,
     # Version of logging
@@ -180,13 +152,15 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
+DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_L10N = True
+USE_L10N = False
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -195,3 +169,7 @@ USE_TZ = True
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'Kazoo_ML', 'static')]
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static/")
+
+LOGIN_REDIRECT_URL = '/'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

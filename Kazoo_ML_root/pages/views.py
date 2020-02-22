@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from . models import Page
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def index(request, pagename):
     pagename = '/' + pagename
     pg = Page.objects.get(permalink=pagename)
