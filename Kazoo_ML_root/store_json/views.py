@@ -22,7 +22,8 @@ def store_data(request):
             data = json.loads(request.body)
         predict_data_path = Path(__file__).parents[2]
         filename = time.strftime("%Y%m%d-%H%M%S") + "_"  + data[0]['HUB'] + '.json'
-        file_path = os.path.join(str(predict_data_path), "predict_data", filename)
+        script_path = os.path.dirname(os.path.realpath(__file__))
+        file_path = os.path.join(os.path.dirname(script_path), "ml_data", "predict_data", filename)
         print(file_path)
         with open(file_path, 'a') as fout:
             json.dump(data, fout)

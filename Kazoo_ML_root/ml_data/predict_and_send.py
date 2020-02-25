@@ -174,7 +174,7 @@ if __name__ == "__main__":
 			print(msg)
 			with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'ml_log.log'), "a") as logFile:
 				logFile.write(msg)
-				logFile.write("----------------------------------------------------")
+				logFile.write("\n----------------------------------------------------")
 
 	except Exception as e:
 		fecha = time.strftime("%Y%m%d-%H%M%S")
@@ -182,5 +182,5 @@ if __name__ == "__main__":
 		print(traceback.format_exc())
 		with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'ml_log.log'), "a") as logFile:
 			logFile.write(error)
-			logFile.write("----------------------------------------------------")
+			logFile.write("\n----------------------------------------------------")
 		mandar_mail_notificacion(str(e), "enzo.tng@gmail.com")
