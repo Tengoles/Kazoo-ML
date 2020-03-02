@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from pages.models import Page
+from django_pandas.io import read_frame
 import json
 import os
 import zlib
@@ -10,6 +12,11 @@ import time
 from datetime import datetime, timedelta
 from store_json.models import received
 from add_hubs.models import hubs
+
+def find_missing(date1, date2):
+	df = read_frame(received.objects.filter(received_datetime__range=(date1, date2)), verbose=False)
+	hubs = read_frame(hubs.objects.all(), verbose=False)
+
 
 # Create your views here.
 @csrf_exempt
@@ -31,4 +38,10 @@ def store_data(request):
         db_entry.save()
         return(HttpResponse("Aca se reciben datos en formato JSON"))
     else:
-        return(HttpResponse("Aca se reciben datos en formato JSON"))
+        #df = read_frame(received.objects.filter(received_datetime__range=(date1, date2)), verbose=False)
+        context = {
+            'title': "Datos recibidos",
+            'content': "En esta pagina se van a poder ver que datos no llegaron",
+            'page_list': Page.objects.all(),
+        }
+        return render(request, 'pages/page.html', context)
