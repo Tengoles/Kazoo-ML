@@ -12,11 +12,54 @@ import time
 from datetime import datetime, timedelta
 from store_json.models import received
 from add_hubs.models import hubs
+from ml_data.models import hubs_models
 
-def find_missing(date1, date2):
-	df = read_frame(received.objects.filter(received_datetime__range=(date1, date2)), verbose=False)
-	hubs = read_frame(hubs.objects.all(), verbose=False)
-
+#Esta funcion fetchea la informacion de datos recibidos entre dos fechas 
+#Luego busca donde hay agujeros de datos y arma un string para mostrarlo en la pagina
+def find_missing(date, ml_model):
+    date = date.replace(hour=7, minute=30)
+    df = read_frame(received.objects.filter(received_datetime__range=(date, date + timedelta(hours=18))), verbose=False)
+    hubs_list = read_frame(hubs_models.objects.all(), verbose=False)
+    hubs_list = hubs_list[hubs_list.hub_ml_model == ml_model].hub_name
+    hubs_list = [hub for hub in hubs_list.values]
+    hub_info = ''
+    display_info = 'Fecha: %s \n\n\n'%(date.strftime("%d/%m/%Y"))
+    for hub in hubs_list:
+        df_temp = df[df.hub_name==hub]
+        missing_data = False
+        new_hub = True
+        if len(df_temp) == 0:
+            hub_info += hub + '\n'
+            missing_data = True
+            hub_info += "No hay datos en todo el dia\n"
+        for i in range(len(df_temp) - 1):
+            if i == 0:
+                delta = df_temp.iloc[i].received_datetime - date
+                if delta > timedelta(minutes=35):
+                    #if new_hub == True:
+                    hub_info += hub + '\n'
+                    new_hub = False
+                    missing_data = True
+                    hub_info += "Primer archivo del dia: %s"%(str(df_temp.iloc[i].received_datetime)) + '\n'
+                    hub_info += "------------\n"
+                    continue
+            else:
+                delta = df_temp.iloc[i+1].received_datetime - df_temp.iloc[i].received_datetime
+            if delta > timedelta(minutes=35):
+                if new_hub == True:
+                    hub_info += hub + '\n'
+                    new_hub = False
+                missing_data = True
+                hub_info += str(df_temp.iloc[i].received_datetime) + '\n'
+                hub_info += str(df_temp.iloc[i+1].received_datetime) + '\n'
+                hub_info += "------------\n"
+        if missing_data == True:
+            hub_info +=	"#######################\n"
+            #print(hub_info)
+        missing_data = False
+        display_info += hub_info
+        hub_info = ''
+    return display_info
 
 # Create your views here.
 @csrf_exempt
@@ -38,10 +81,20 @@ def store_data(request):
         db_entry.save()
         return(HttpResponse("Aca se reciben datos en formato JSON"))
     else:
-        #df = read_frame(received.objects.filter(received_datetime__range=(date1, date2)), verbose=False)
         context = {
-            'title': "Datos recibidos",
-            'content': "En esta pagina se van a poder ver que datos no llegaron",
-            'page_list': Page.objects.all(),
-        }
-        return render(request, 'pages/page.html', context)
+        'title': "Datos recibidos",
+        'content': "Aqui se va a poder elegir un dia y se va a mostrar los datos que no llegaron en el mismo",
+        'page_list': Page.objects.all(),
+    }
+    return render(request, 'pages/page.html', context)
+
+def display_missing(request, slug):
+    ml_model = slug[8:]
+    date = datetime.strptime(slug[0:7], "%Y%m%d")
+    display_info = find_missing(date, ml_model).replace('\n', '<br>')
+    context = {
+        'title': "Datos recibidos",
+        'content': display_info,
+        'page_list': Page.objects.all(),
+    }
+    return render(request, 'pages/page.html', context)
