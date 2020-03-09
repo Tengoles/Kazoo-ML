@@ -25,7 +25,7 @@ def find_missing(date, ml_model):
     hub_info = ''
     display_info = 'Fecha: %s \n\n\n'%(date.strftime("%d/%m/%Y"))
     for hub in hubs_list:
-        df_temp = df[df.hub_name==hub]
+        df_temp = df[df.hub_name==hub].sort_values(by="received_datetime")
         missing_data = False
         new_hub = True
         if len(df_temp) == 0:
