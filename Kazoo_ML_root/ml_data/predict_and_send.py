@@ -107,6 +107,7 @@ class TransitionError(Exception):
 
 if __name__ == "__main__":
 	try:
+		exec_time = time.time()
 		hubs = list(hubs_models.objects.values('hub_name', 'hub_ml_model'))
 		#hubs es una lista de diccionarios de la forma {'hub_name': '', 'hub_ml_model': ''}
 		predict_data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),"predict_data")
@@ -158,7 +159,7 @@ if __name__ == "__main__":
 			process_and_send(dataset)
 			print("Trato de insertar a %s"%(tabla))
 			Model = apps.get_model("ml_data", tabla)
-			Model.objects.bulk_create(Model(**vals) for vals in dataset.to_dict('records'))
+			Model.objects.bulk_create((Model(**vals) for vals in dataset.to_dict('records')), ignore_conflicts=True)
 			print("Lo logre")
 			for file in json_files:
 				for hub in hubs_dict[tabla]:
@@ -174,6 +175,7 @@ if __name__ == "__main__":
 			print(msg)
 			with open(os.path.join(os.path.dirname(os.path.realpath(__file__)),'ml_log.log'), "a") as logFile:
 				logFile.write(msg)
+				logFile.write("\nTiempo de ejecucion: %i minutos"%(int((time.time()-exec_time)/60))) 
 				logFile.write("\n----------------------------------------------------")
 
 	except Exception as e:
