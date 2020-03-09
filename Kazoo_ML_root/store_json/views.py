@@ -18,12 +18,14 @@ from ml_data.models import hubs_models
 #Luego busca donde hay agujeros de datos y arma un string para mostrarlo en la pagina
 def find_missing(date, ml_model):
     date = date.replace(hour=7, minute=30)
-    df = read_frame(received.objects.filter(received_datetime__range=(date, date + timedelta(hours=18))), verbose=False)
+    df = read_frame(received.objects.filter(received_datetime__range=(date, date + timedelta(hours=19))), verbose=False)
     hubs_list = read_frame(hubs_models.objects.all(), verbose=False)
     hubs_list = hubs_list[hubs_list.hub_ml_model == ml_model].hub_name
     hubs_list = [hub for hub in hubs_list.values]
     hub_info = ''
     display_info = 'Fecha: %s \n\n\n'%(date.strftime("%d/%m/%Y"))
+    if len(df) == 0:
+        display_info += "No hay datos en todo el dia de ningun Hub"
     for hub in hubs_list:
         df_temp = df[df.hub_name==hub].sort_values(by="received_datetime")
         missing_data = False
@@ -32,6 +34,12 @@ def find_missing(date, ml_model):
             hub_info += hub + '\n'
             missing_data = True
             hub_info += "No hay datos en todo el dia\n"
+            continue
+        elif len(df_temp) == 1:
+            hub_info += hub + '\n'
+            missing_data = True
+            hub_info += "Unico post del dia: %s\n"%(str(df_temp.iloc[0].received_datetime))
+            continue
         for i in range(len(df_temp) - 1):
             if i == 0:
                 delta = df_temp.iloc[i].received_datetime - date
@@ -53,7 +61,18 @@ def find_missing(date, ml_model):
                 hub_info += str(df_temp.iloc[i].received_datetime) + '\n'
                 hub_info += str(df_temp.iloc[i+1].received_datetime) + '\n'
                 hub_info += "------------\n"
+        final_datetime = date + timedelta(hours=18)
+        delta = final_datetime - df_temp.iloc[len(df_temp)-1].received_datetime
+        if delta > timedelta(minutes=40):
+            if new_hub == True:
+                    hub_info += hub + '\n'
+                    new_hub = False
+            hub_info += "Ultimo post recibido: "
+            hub_info += str(df_temp.iloc[len(df_temp)-1].received_datetime) + '\n'
+            missing_data = True
         if missing_data == True:
+            #print(df_temp.head())
+            #print(df_temp.tail())
             hub_info +=	"#######################\n"
             #print(hub_info)
         missing_data = False
