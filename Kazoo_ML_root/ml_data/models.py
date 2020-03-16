@@ -35,5 +35,5 @@ class PCSEST(models.Model):
 	PCSEST_EURO_N1 = models.FloatField(blank=True, null=True)
 	PCSEST_EURO_N2 = models.FloatField(blank=True, null=True)
 	MAC = models.CharField(max_length=17)
-	fechahora = models.DateTimeField()
+	fechahora = models.DateTimeField(null=True, blank=True)
 	Zona = models.CharField(max_length=50)
