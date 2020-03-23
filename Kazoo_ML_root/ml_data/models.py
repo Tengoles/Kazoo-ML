@@ -37,3 +37,9 @@ class PCSEST(models.Model):
 	MAC = models.CharField(max_length=17)
 	fechahora = models.DateTimeField(null=True, blank=True)
 	Zona = models.CharField(max_length=50)
+
+class IPG(models.Model):
+	fechahora = models.DateTimeField(null=True, blank=True)
+	MAC = models.CharField(max_length=17)
+	rssi = models.FloatField(blank=True, null=True)
+	evento = models.CharField(max_length=50)
