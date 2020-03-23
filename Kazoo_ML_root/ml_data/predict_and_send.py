@@ -148,6 +148,7 @@ if __name__ == "__main__":
 						dataset.loc[dataset_i, 'fechahora'] = DF_mac.iloc[i].fechahora
 						dataset_i += 1
 			dataset = dataset.sort_values(by="fechahora")
+			dataset.drop(dataset.tail(1).index,inplace=True)
 			print("Se armo el dataset de %s"%(tabla))
 			array = dataset.values
 			X = array[:, 0:(len(dataset.columns) - 3)]
