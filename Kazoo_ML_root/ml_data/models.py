@@ -37,6 +37,38 @@ class PCSEST(models.Model):
 	MAC = models.CharField(max_length=17)
 	fechahora = models.DateTimeField(null=True, blank=True)
 	Zona = models.CharField(max_length=50)
+	Probability = models.FloatField(blank=True, null=True)
+
+['PCS_N1_1', 'PCS_N1_18', 'PCS_N1_2', 'PCS_N1_3', 'PCS_N1_4', 'PCS_N1_5', 'PCS_N1_6', 'PCS_N1_7', 
+'PCS_N2_10', 'PCS_N2_11', 'PCS_N2_12', 'PCS_N2_13', 'PCS_N2_8', 'PCS_N2_9',
+ 'PCS_N3_14', 'PCS_N3_15', 'PCS_N3_16', 'PCS_N3_17']
+class PCS_indoor(models.Model):
+	PCS_N1_1 = models.FloatField(blank=True, null=True)
+	PCS_N1_18 = models.FloatField(blank=True, null=True)
+	PCS_N1_2 = models.FloatField(blank=True, null=True)
+	PCS_N1_3 = models.FloatField(blank=True, null=True)
+	PCS_N1_4 = models.FloatField(blank=True, null=True)
+	PCS_N1_5 = models.FloatField(blank=True, null=True)
+	PCS_N1_6 = models.FloatField(blank=True, null=True)
+	PCS_N1_7 = models.FloatField(blank=True, null=True)
+	
+	PCS_N2_10 = models.FloatField(blank=True, null=True)
+	PCS_N2_11 = models.FloatField(blank=True, null=True)
+	PCS_N2_12 = models.FloatField(blank=True, null=True)
+	PCS_N2_13 = models.FloatField(blank=True, null=True)
+	PCS_N2_8 = models.FloatField(blank=True, null=True)
+	PCS_N2_9 = models.FloatField(blank=True, null=True)
+	
+	PCS_N3_14 = models.FloatField(blank=True, null=True)
+	PCS_N3_15 = models.FloatField(blank=True, null=True)
+	PCS_N3_16 = models.FloatField(blank=True, null=True)
+	PCS_N3_17 = models.FloatField(blank=True, null=True)
+	
+	MAC = models.CharField(max_length=17)
+	fechahora = models.DateTimeField(null=True, blank=True)
+	
+	Zona = models.CharField(max_length=50)
+	Probability = models.FloatField(blank=True, null=True)
 
 class IPG(models.Model):
 	fechahora = models.DateTimeField(null=True, blank=True)

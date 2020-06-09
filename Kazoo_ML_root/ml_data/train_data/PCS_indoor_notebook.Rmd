@@ -1,0 +1,531 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.5.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+# %autosave 0
+```
+
+```{python}
+import os
+import pandas as pd
+import json
+import numpy as np
+from datetime import timedelta
+import pickle
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import cross_val_score
+import seaborn as sn
+import matplotlib.pyplot as plt
+```
+
+<!-- #region -->
+Funciones a utilizar:
+
+
+*   append_entries_json: Toma un path y convierte todos los archivos json que esten ahi en un DataFrame. Deben tener el mismo formato para que funcione.
+*   df_to_dataset: Convierte el DataFrame de append_entries_json y le hace lo necesario para convertirlo en el formato para entrenar modelos.
+<!-- #endregion -->
+
+```{python}
+import operator
+import random
+
+def append_entries_json(dirPATH):
+    files = os.listdir(dirPATH)
+    files.sort()
+    data_cruda = []
+    for f in files:
+        #print(f)
+        if ".json" in f:
+            with open(os.path.join(dirPATH, f)) as json_file:
+                data_cruda.extend(json.loads(json_file.read()))
+    DF = pd.DataFrame(data_cruda)
+    DF['fechahora'] = pd.to_datetime(DF['fechahora'], format="%Y-%m-%d %H:%M:%S.%f")
+    return DF
+
+def df_to_dataset(df, train_times, train_macs, Classes):
+    DF_filtrado = DF.loc[(DF['fechahora'] > train_times[0][0][0]) & (DF['fechahora'] < train_times[-1][-1][1])]
+    DF_filtrado = DF_filtrado[DF_filtrado["MAC"].isin(train_macs)]
+    # las columnas del dataset van a ser el RSSI en cada Hub, 
+    # la zona a la que pertenecen esas lecturas,
+    # el datetime de cada burst
+    # y la mac recibida
+    columns = list(sorted(DF_filtrado.HUB.unique()))
+    print(columns)
+    columns.append('Zona')
+    columns.append('MAC')
+    columns.append('fechahora')
+    DF_filtrado = DF_filtrado[DF_filtrado['MAC'].isin(train_macs)]  #solo me interesan los datos obtenidos de estas Macs
+    dataset = pd.DataFrame(columns=columns).astype(np.int)
+    dataset_i = 0 #indice de fila para ir recorriendo el dataset final que voy creando
+    print("Empiezo a armar el dataset")
+    for (periodos_zona,zona) in zip(train_times, Classes):
+        #print("Armando " + str(zona))
+        DF_zona = pd.DataFrame()
+        for periodo_zona in periodos_zona:
+            #la gracia de este for es que tambien funciona con varios periodos de test distintos en una misma zona
+            DF_zona = DF_zona.append(DF_filtrado.loc[(DF_filtrado['fechahora'] >= periodo_zona[0]) & (DF_filtrado['fechahora'] <= periodo_zona[1])])
+
+        for mac in train_macs:
+            DF_mac = DF_zona.loc[DF_zona['MAC'] == mac].sort_values(by='fechahora') #aca voy a tener un DF con los datos de una de las MAC en el periodo en el que estuvo en una determinada zona
+                                                                                    #dicha zona es la que esta en 'clase'
+            for i in range(len(DF_mac) - 1):
+                dataset.loc[dataset_i, DF_mac.iloc[i].HUB] = float(DF_mac.iloc[i].RSSI)
+                probe_delta = DF_mac.iloc[i + 1].fechahora - DF_mac.iloc[i].fechahora
+                if probe_delta < timedelta(seconds=2.5): #aca quiero buscar la lineas que son parte de la misma rafaga de probe request
+                    pass
+                else:
+                    dataset.loc[dataset_i, 'Zona'] = zona
+                    dataset.loc[dataset_i, 'MAC'] = mac
+                    dataset.loc[dataset_i, 'fechahora'] = DF_mac.iloc[i].fechahora
+                    dataset_i += 1
+    dataset = dataset.sort_values(by='fechahora')
+    dataset.drop(dataset.tail(1).index,inplace=True)
+    #dataset = dataset.fillna(0)
+    return dataset
+
+def df_augmentation(df):
+    print("Augmenting data")
+    zonas = df.Zona.unique()
+    samples = {}
+    for zona in zonas:
+        df_temp = df[df["Zona"] == zona]
+        samples[zona] = len(df_temp)
+        #print("Zona: %s    Muestras: %i" % (zona, len(df_temp)))
+    #target samples to augment every class that has less samples than that
+    target = sum([samples[key] for key in samples])/len([samples[key] for key in samples])
+    print("Target samples: %i" % (target))
+    
+    hubs = list(filter(lambda x: ("PCS" in x), list(df.columns)))
+    df_augmented = pd.DataFrame(columns=df.columns)
+    for zona in zonas:
+        df_temp = df[df["Zona"] == zona]
+        for i, row in df_temp.iterrows():
+            if len(df_temp) + len(df_augmented[df_augmented["Zona"] == zona]) < target:
+                # relevant_data contains the name of the Hub and RSSI captured by it when it's != 0
+                relevant_data = {}
+                for hub in hubs:
+                    if row[hub] != 0:
+                        relevant_data[hub] = row[hub]
+                for hub in relevant_data:
+                    row[hub] = row[hub] + random.choice([-1, 1, -2, 2])
+                df_augmented = df_augmented.append(row)
+            else:
+                break
+    #print(relevant_data)
+    #print(df_augmented)
+    return df.append(df_augmented).sort_values(by='fechahora')
+
+```
+
+```{python}
+"""Classes = ['Nivel1_Zona2', 'Nivel1_Zona7', 'Nivel1_Zona1','Nivel1_Zona4', 'Nivel1_Zona8', 'Nivel1_Zona5', 'Nivel1_Zona6', 
+                'Nivel2_Zona4', 'Nivel2_Zona8', 'Nivel2_Zona3', 'Nivel2_Zona2', 'Nivel2_Zona1', 'Nivel2_Zona5',
+                'Nivel3_Zona2', 'Nivel3_Zona1', 'Nivel3_Zona3', 'Nivel3_Zona4']  # estas son las zonas en las cuales quiero que el modelo aprenda que los celulares van
+    train_times = [[('20200312-112800', '20200312-113900')],
+                [('20200312-114200', '20200312-115300')],
+                [('20200312-115600', '20200312-120600')],
+                [('20200312-120900', '20200312-121700')],
+                [('20200312-121900', '20200312-123200')],
+                [('20200312-123800', '20200312-125300')],
+                [('20200312-125500', '20200312-130600')], ########
+                [('20200312-154100', '20200312-154900')],
+                [('20200312-155100', '20200312-155600')],
+                [('20200312-155800', '20200312-161300')],
+                [('20200312-161600', '20200312-162300')],
+                [('20200312-162500', '20200312-163300')],
+                [('20200312-163500', '20200312-165000')], #######
+                [('20200312-165700', '20200312-170800')],
+                [('20200312-171100', '20200312-171900')],
+                [('20200312-172100', '20200312-172900')],
+                [('20200312-173100', '20200312-174300')],
+                ] # rangos de tiempo en los que se realizo cada entrenamiento, uno por cada clase"""
+Classes = ['Nivel1_Zona2', 'Nivel1_Zona1','Nivel1_Zona4', 'Nivel1_Zona8', 'Nivel1_Zona5', 'Nivel1_Zona6', 
+                'Nivel2_Zona4', 'Nivel2_Zona8', 'Nivel2_Zona3', 'Nivel2_Zona2', 'Nivel2_Zona1', 'Nivel2_Zona5',
+                'Nivel3_Zona2', 'Nivel3_Zona1', 'Nivel3_Zona3', 'Nivel3_Zona4']  # estas son las zonas en las cuales quiero que el modelo aprenda que los celulares van
+train_times = [[('20200312-112800', '20200312-113900')],
+                [('20200312-114200', '20200312-115300'), ('20200312-115600', '20200312-120600')],
+                [('20200312-120900', '20200312-121700')],
+                [('20200312-121900', '20200312-123200')],
+                [('20200312-123800', '20200312-125300')],
+                [('20200312-125500', '20200312-130600')], ########
+                [('20200312-154100', '20200312-154900')],
+                [('20200312-155100', '20200312-155600')],
+                [('20200312-155800', '20200312-161300')],
+                [('20200312-161600', '20200312-162300')],
+                [('20200312-162500', '20200312-163300')],
+                [('20200312-163500', '20200312-165000')], #######
+                [('20200312-165700', '20200312-170800')],
+                [('20200312-171100', '20200312-171900')],
+                [('20200312-172100', '20200312-172900')],
+                [('20200312-173100', '20200312-174300')],
+                ] # rangos de tiempo en los que se realizo cada entrenamiento, uno por cada clase"""
+train_macs = ["5c:70:a3:0e:28:b2", "14:5a:05:7f:e2:a9", "04:d6:aa:69:da:f1", "0c:41:3e:48:c7:6c"]
+```
+
+Nivel 1
+<img src="./PCS_indoor/Nivel1_zonas.jpeg">
+
+Nivel 2
+<img src="./PCS_indoor/Nivel2_zonas.jpeg">
+
+Nivel 3
+<img src="./PCS_indoor/Nivel3_zonas.jpeg">
+
+```{python}
+#dirPATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "PCS_indoor")
+DF = append_entries_json(".\PCS_indoor").sort_values(by="fechahora")
+DF = DF.reset_index(drop=True)
+print(DF)
+dataset = df_to_dataset(DF, train_times, train_macs, Classes)
+dataset = dataset.reset_index(drop=True)
+dataset = df_augmentation(dataset)
+print(dataset)
+X = dataset.iloc[:, 0:dataset.shape[1]-3].values
+y = dataset.iloc[:, -3].values
+```
+
+```{python}
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+import xgboost
+from sklearn.neural_network import MLPClassifier
+
+svm = SVC(gamma='auto')
+RF = RandomForestClassifier(max_depth=17, min_samples_leaf=10, max_features=6, random_state=420)
+
+XGB = xgboost.XGBClassifier()
+
+NN = MLPClassifier()
+
+models = {"SVM": svm, "Random Forest": RF,
+         "XGBoost": XGB, "Neural Network": NN}
+
+from sklearn.model_selection import cross_val_score
+for key in models:
+    print(key)
+    model = models[key]
+    scores = cross_val_score(model, X, y, cv=10)
+    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    print("-------")
+#"""from sklearn.model_selection import LeaveOneOut
+#loo = LeaveOneOut()
+#model = XGBClassifier()
+#accuracies = []
+#predictions = []
+#for train_index, test_index in loo.split(X):
+#    print("TRAIN:", train_index, "TEST:", test_index)
+#    X_train, X_test = X[train_index], X[test_index]
+#    Y_train, Y_test = y[train_index], y[test_index]
+#    model = model.fit(X_train, Y_train)
+#    Y_pred = model.predict(X_test)
+#    accuracy = accuracy_score(Y_test, Y_pred)
+#    accuracies.append(accuracy)
+#    predictions.append(list(Y_pred)[0])
+#dataset["Prediction"] = predictions"""
+
+#dataset que incluye predicciones hechas con modelo despues de pasar por Leave One Out Cross Validation
+#dataset = pickle.load(open("./PCS_indoor/train_dataset_PCS_indoor_with_predictions.pkl", 'rb'))
+
+```
+
+Se puede ver que claramente el camino va por el lado de XGBoost, Random Forest o Neural Network. Lo cual tiene sentido dada la naturaleza de los datos. Dado que XGBoost es un caso particular de Random Forest pero con caracteristicas que lo hacen ser mucho mejor entonces nos vamos a enfocar en hacer funcionar XGBoost o Redes Neuronales lo mejor posible.
+
+Para mejorar las predicciones de NN y XGB se va a realizar un tuneo de los hiper-parametros. Nota: para ver los hiper-parametros que se le asigno a un modelo se hace estimator.get_params()
+
+
+# XGBoost
+
+```{python}
+from xgboost.sklearn import XGBClassifier
+from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import LabelEncoder
+
+seed = 420
+cv = StratifiedKFold(n_splits=10 , shuffle=True, random_state=seed)
+accuracies = []
+accuracies2 = []
+lost_samples= []
+encoder_xgb = LabelEncoder()
+encoder_xgb.fit(Classes)
+for train_index, test_index in cv.split(X,y):
+    # make train and test subsets for the split
+    X_train, X_test = X[train_index], X[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+    # fit data to classififer
+    bst = XGBClassifier().fit(X_train, y_train)
+    # get predictions for the test split
+    preds = bst.predict(X_test)
+    # store accuracy with this split for later analysis
+    accuracies.append(accuracy_score(y_test, preds))
+    # make predictions in the form of class probabilities
+    preds2 = bst.predict_proba(X_test)
+    # make a dataframe containing predictions and scores to be filtered
+    df_predictions_xgb = pd.DataFrame()
+    df_predictions_xgb["Zona"] = y[test_index]
+    df_predictions_xgb["Prediction"] = encoder_xgb.inverse_transform(np.argmax(preds2, axis=1))
+    df_predictions_xgb["Prediction_Score"] = list(map(max, preds2))
+    df_predictions_xgb2 = df_predictions_xgb[df_predictions_xgb["Prediction_Score"] > 0.7]
+    errors_df = df_predictions_xgb2[df_predictions_xgb2["Zona"] != df_predictions_xgb2["Prediction"]]
+    success_df = df_predictions_xgb2[df_predictions_xgb2["Zona"] == df_predictions_xgb2["Prediction"]]
+    # calculate accuracy 
+    accuracies2.append(len(success_df)/(len(errors_df)+len(success_df)))
+    lost_samples.append(1 - len(df_predictions_xgb2)/len(df_predictions_xgb))
+accuracies = np.array(accuracies)
+accuracies2 = np.array(accuracies2)
+lost_samples = np.array(lost_samples)
+print("Accuracy: %0.2f (+/- %0.2f)" % (accuracies.mean(), accuracies.std() * 2))
+print("Accuracy eliminando predicciones con menos de 70 por ciento de probabilidad de acierto: %0.2f (+/- %0.2f)" % (accuracies2.mean(), accuracies2.std() * 2))
+print("Muestras perdidas: %0.2f (+/- %0.2f)" % (lost_samples.mean(), lost_samples.std() * 2))
+```
+
+### Sin hacer ningun cambio en los parametros de XGBoost tenemos un Accuracy de 77% +/- 3% 
+
+### Filtrando las predicciones que tienen menos de 70% de probabilidad de ser correctas se tiene un accuracy de 91% +/- 2%. Esto implica descartar 9% +/- 2% de las muestras
+
+### Se va a intentar encontrar mejores parametros utilizando GridSearchCV (Clase de sklearn para hacer combinaciones de parametros)
+
+```{python}
+params_fixed = {
+    'objective':'multi:softmax',
+    'silent':True,
+    'colsample_bytree':1
+}
+
+params_grid = {
+    'max_depth': [2,4,8,16],
+    'gamma': [0,1,4,8],
+    'eta': [0.2,0.4,0.8,1],
+    'n_estimators': [10, 20, 40, 120],
+    'subsample':[0.6, 0.7, 0.8, 1], 
+    'learning_rate': np.linspace(0.01, 1, 3)
+}
+
+cv = StratifiedKFold(n_splits=10 , shuffle=True, random_state=seed)
+
+from sklearn.model_selection import GridSearchCV
+bst_grid = GridSearchCV(
+    estimator= XGBClassifier(**params_fixed, seed=420),
+    param_grid=params_grid,
+    cv=cv,
+    scoring='accuracy',
+    n_jobs=3,
+    verbose=7,
+    return_train_score=True
+)
+
+bst_grid.fit(X,y)
+```
+
+```{python}
+print("Best accuracy obtained: {0}".format(bst_grid.best_score_))
+print("Parameters:")
+for key, value in bst_grid.best_params_.items():
+    print("\t{}: {}".format(key, value))
+```
+
+```{python}
+df_params = pd.DataFrame(bst_grid.cv_results_["params"])
+bst_grid.cv_results_.keys()
+df_params["score"] = bst_grid.cv_results_['mean_test_score']
+df_params = df_params.sort_values(by='score')
+print(df_params[df_params.score < 0.7]["eta"].value_counts())
+print(df_params[df_params.score < 0.7]["gamma"].value_counts())
+print(df_params[df_params.score < 0.7]["learning_rate"].value_counts())
+print(df_params[df_params.score < 0.7]["max_depth"].value_counts())
+print(df_params[df_params.score < 0.7]["n_estimators"].value_counts())
+print(df_params[df_params.score < 0.7]["subsample"].value_counts())
+```
+
+### Analizando los valores de los parametros que dieron un score menor a 70% se encuentra que los siguientes son objetivamente malos:
+
+#### learning_rate = 0.01
+#### max_depth = 2
+#### n_estimators = 10
+
+Se procede a intentar nuevas combinaciones de valores teniendo estos en cuenta y tambien cambiando subsample por colsample_bytree porque intuitivamente considero que va a tener efectos mas notables.
+
+```{python}
+params_grid2 = {
+    'max_depth': [4,8,12,16],
+    'gamma': [0,1,4,8],
+    'eta': [0.2,0.4,0.8,1],
+    'n_estimators': [40, 120, 160],
+    'learning_rate': [0.1, 1, 3],
+    'colsample_bytree': [0.2, 0.4, 0.6, 1]
+}
+
+cv = StratifiedKFold(n_splits=10 , shuffle=True, random_state=seed)
+
+from sklearn.model_selection import GridSearchCV
+bst_grid2 = GridSearchCV(
+    estimator= XGBClassifier(**params_fixed, seed=420),
+    param_grid=params_grid2,
+    cv=cv,
+    scoring='accuracy',
+    n_jobs=3,
+    verbose=5
+)
+
+bst_grid2.fit(X,y)
+```
+
+```{python}
+print("Best accuracy obtained: {0}".format(bst_grid2.best_score_))
+print("Parameters:")
+for key, value in bst_grid2.best_params_.items():
+    print("\t{}: {}".format(key, value))
+```
+
+# Neural Network
+
+```{python}
+from keras.models import Sequential
+from keras.layers import Dense
+from sklearn.preprocessing import LabelEncoder
+from keras.utils import np_utils
+from sklearn.model_selection import StratifiedKFold
+
+#class extendedSequential(Sequential):
+#    def __init__(self):
+#        super()
+#print(X.shape)
+#print(y.shape)
+
+#train_data_path = os.path.join(os.getcwd(), "PCS_INDOOR")
+#print(train_data_path)
+
+model = Sequential()
+model.add(Dense(13, input_dim=X.shape[1], activation='relu'))
+model.add(Dense(13, activation='relu'))
+model.add(Dense(16, activation='softmax'))
+
+model.summary()
+# compile the keras model
+model.compile(loss='categorical_crossentropy',   optimizer='adam', metrics=['accuracy'])
+
+# convert integers to dummy variables (i.e. one hot encoded)
+print(X)
+print(y)
+
+# separate data in train and test splits
+skf = StratifiedKFold(n_splits=10)
+skf.get_n_splits(X, y)
+
+#Make labels encoder
+encoder = LabelEncoder()
+encoder.fit(y)
+
+# list to save models
+models = []
+# save weights of model before they start getting fitted
+Wsave = model.get_weights()
+print("Training")
+split_errors_list = []
+for train_index, test_index in skf.split(X=X, y=y):
+    #print("TRAIN:", train_index, "TEST:", test_index)
+    X_train, X_test = X[train_index], X[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+    dummy_y_train = np_utils.to_categorical(encoder.transform(y_train)) #[[0. 1. 0. ... 0. 0. 0.], [0. 1. 0. ... 0. 0. 0.], ...]
+    # reset weights to their state pre-training
+    #model.set_weights(Wsave)
+    model.fit(X_train, dummy_y_train, epochs=300, batch_size=10, verbose=0, shuffle=True)
+    
+    # evaluate the keras model
+    dummy_y_test = np_utils.to_categorical(encoder.transform(y_test))
+    _, accuracy = model.evaluate(X_test, dummy_y_test)
+    print('Accuracy: %.2f' % (accuracy*100))
+    # save every model in a list
+    models.append(model)
+    # get predicted probabilities of each class for every test sample
+    predictions = model.predict(X_test)
+    df_predictions = pd.DataFrame()
+    df_predictions["Zona"] = y[test_index]
+    df_predictions["Prediction"] = encoder.inverse_transform(np.argmax(predictions, axis=1))
+    #get probability of the prediction compared to the other classes
+    df_predictions["Prediction_Score"] = list(map(max, predictions))
+    df_predictions = df_predictions[df_predictions["Prediction_Score"] > 0.7]
+    errors_df = df_predictions[df_predictions["Zona"] != df_predictions["Prediction"]]
+    success_df = df_predictions[df_predictions["Zona"] == df_predictions["Prediction"]]
+    new_accuracy = len(success_df)/(len(errors_df)+len(success_df))
+    print("Accuracy eliminando predicciones con menos de 70 por ciento de probabilidad de acierto: %.2f" % (new_accuracy))
+    zone_errors = {}
+    for zona in errors_df.Zona.unique():
+        zone_errors[zona] = len(errors_df[errors_df["Zona"] == zona])
+    split_errors_list.append(zone_errors)
+    print("---------------------")
+split_errors = pd.DataFrame(split_errors_list)
+#print(split_errors.describe())
+```
+
+# Reglas
+### Defino previamente de forma arbitraria cual es el Hub(s) mas representativo(s) para cada zona y si el mayor RSSI de la fila esta en ese Hub tomo como que su zona es la que le corresponde a ese Hub
+
+```{python}
+import operator
+
+dominant_hubs = {"Nivel1_Zona2":["PCS_N1_1"], "Nivel1_Zona3":["PCS_N1_3"],
+"Nivel1_Zona1":["PCS_N1_2", "PCS_N1_4"], "Nivel1_Zona4":["PCS_N1_7"],
+"Nivel1_Zona8":["PCS_N1_6"], "Nivel1_Zona5":["PCS_N1_5", "PCS_N1_4"],
+"Nivel1_Zona6":["PCS_N1_18"], "Nivel2_Zona1":["PCS_N2_12"],
+"Nivel2_Zona5":["PCS_N2_13"], "Nivel2_Zona3":["PCS_N2_9"],
+"Nivel2_Zona2":["PCS_N2_8"], "Nivel2_Zona4":["PCS_N2_11"],
+"Nivel2_Zona8":["PCS_N2_10"], "Nivel3_Zona4":["PCS_N3_17"],
+"Nivel3_Zona1":["PCS_N3_16"], "Nivel3_Zona3":["PCS_N3_15"],
+"Nivel3_Zona2":["PCS_N3_14"]}
+
+hubs = list(filter(lambda x: ("PCS" in x), list(dataset.columns)))
+#print(dict(hubs))
+predictions = []
+for index, row in dataset.iterrows():
+    relevant_data = {}
+    for hub in hubs:
+        if row[hub] != 0:
+            relevant_data[hub] = row[hub]
+    relevant_hub = max(relevant_data.items(), key=operator.itemgetter(1))[0]
+    for key in dominant_hubs:
+        if relevant_hub in dominant_hubs[key]:
+            predictions.append(key)
+            break
+        else:
+            pass
+df_reglas = dataset
+df_reglas["Predictions"] = predictions
+accuracy_reglas = len(df_reglas[df_reglas["Predictions"] == df_reglas["Zona"]])/len(dataset)
+print("%.2f" % accuracy_reglas)
+```
+
+# Conclusiones
+
+### XGBoost es el mejor modelo ya que sin ninguna modificacion de hiper-parametros se tiene un accuracy de 78% que sube hasta 89% al descartar predicciones que tienen una probabilidad menor a 70% de ser correctas.
+
+#### Una Red Neuronal tiene un accuracy de alrededor de 70% aumentable a 80% descartando predicciones debiles y todo esto es con mucho viento a favor. Tal vez con mas dedicacion intentando otra arquitectura de NN esto se puede mejorar pero decido que los resultados con XGBoost son lo suficientemente buenos.
+
+##### Reglas da un accuracy de 70% lo cual solamente sirve para demostrar que vale la pena utilizar machine learning para mejorar las predicciones.
+
+```{python}
+import pickle
+from xgboost.sklearn import XGBClassifier
+from sklearn.metrics import accuracy_score
+
+final_model = XGBClassifier().fit(X,y)
+print(accuracy_score(y, final_model.predict(X)))
+pickle.dump(final_model, open(os.path.join(os.getcwd(), "PCS_indoor", "PCS_indoor_model.sav"),'wb'))
+```
+
+```{python}
+
+```
