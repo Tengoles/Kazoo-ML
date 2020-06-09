@@ -188,7 +188,7 @@ if __name__ == "__main__":
 			print("Lo logre")
 			for file in json_files:
 				for hub in hubs_dict[tabla]:
-					if hub in file:
+					if hub + ".json" in file:
 						if not os.path.exists(os.path.join(predict_data_path, tabla)):
 							os.makedirs(os.path.join(predict_data_path, tabla))
 						print("moving %s to %s" % (file, tabla))
