@@ -1,2 +1,1 @@
-# Kazoo-ML
-Repositorio el servidor de Machine Learning
+Kazoo ML server using Django

@@ -1,13 +1,27 @@
-#Run this script after cloning the repository
-
 import os
-from flaskr import model_settings
+import subprocess
 
-print("Create train data directory")
-os.system("mkdir " + model_settings.train_data_path[:-1])
-print("Create predict data directory")
-os.system("mkdir " + model_settings.predict_data_path[:-1])
-print("Create logs directory")
-os.system("mkdir " + model_settings.LOG_FILE[0:-12])
-print("Create log file")
-os.system("touch " + model_settings.LOG_FILE)
+def touch(path):
+	with open(path, 'a'):
+		os.utime(path, None)
+os.system("pip install -r requirements.txt")
+BASE_DIR = str(os.path.dirname(os.path.abspath(__file__)))
+try:
+	os.mkdir(os.path.join(BASE_DIR, "Kazoo_ML_root", "ml_data", "predict_data"))
+	print('Directory %s created.'%(str(os.path.join(BASE_DIR, "Kazoo_ML_root", "ml_data", "predict_data")))))
+except FileExistsError as e:
+	print('Directory %s not created.'%(str(os.path.join(BASE_DIR, "Kazoo_ML_root", "ml_data", "predict_data"))))
+
+try:
+	os.mkdir(os.path.join(BASE_DIR, "logs"))
+	print('Directory %s created.'%(str(os.path.join(BASE_DIR, "logs"))))
+except FileExistsError as e:
+	print('Directory %s not created.'%(str(os.path.join(BASE_DIR, "logs"))))
+
+touch(os.path.join(BASE_DIR, "logs", "general_log.log"))
+
+#os.system("%s python manage.py makemigrations"%(os.path.join(BASE_DIR, "Kazoo_ML_root")))
+#os.system("%s python manage.py migrate"%(os.path.join(BASE_DIR, "Kazoo_ML_root")))
+#os.system("%s python manage.py collectstatic"%(os.path.join(BASE_DIR, "Kazoo_ML_root")))
+#subprocess.Popen(os.path.join(BASE_DIR, "Kazoo_ML_root", "python manage.py makemigrations"))
+
