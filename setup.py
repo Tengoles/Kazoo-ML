@@ -7,10 +7,10 @@ def touch(path):
 os.system("pip install -r requirements.txt")
 BASE_DIR = str(os.path.dirname(os.path.abspath(__file__)))
 try:
-	os.mkdir(os.path.join(BASE_DIR, "predict_data"))
-	print('Directory %s created.'%(str(os.path.join(BASE_DIR, "predict_data"))))
+	os.mkdir(os.path.join(BASE_DIR, "Kazoo_ML_root", "ml_data", "predict_data"))
+	print('Directory %s created.'%(str(os.path.join(BASE_DIR, "Kazoo_ML_root", "ml_data", "predict_data")))))
 except FileExistsError as e:
-	print('Directory %s not created.'%(str(os.path.join(BASE_DIR, "predict_data"))))
+	print('Directory %s not created.'%(str(os.path.join(BASE_DIR, "Kazoo_ML_root", "ml_data", "predict_data"))))
 
 try:
 	os.mkdir(os.path.join(BASE_DIR, "logs"))
